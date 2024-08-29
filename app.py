@@ -7,6 +7,7 @@ import logging
 import os
 from typing import List, Optional
 
+import torch
 import uvicorn
 from fastapi import FastAPI, HTTPException, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -22,6 +23,13 @@ from surya.schema import OCRResult
 app = FastAPI()
 security = HTTPBearer()
 env_bearer_token = None
+
+
+# GPU显存回收
+def torch_gc():
+    if torch.cuda.is_available():  # 检查是否可用CUDA
+        torch.cuda.empty_cache()  # 清空CUDA缓存
+        torch.cuda.ipc_collect()  # 收集CUDA内存碎片
 
 
 class ImageReq(BaseModel):
@@ -104,6 +112,8 @@ class Chat(object):
             result.append({"text": text_line.text, "bbox": text_line.bbox})
         if sorted:
             result = Chat.sort_text_by_bbox(result)
+
+        torch_gc()
         return result
 
 
